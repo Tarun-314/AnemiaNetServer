@@ -1,15 +1,26 @@
 import joblib
 import cv2
 import numpy as np
-from tensorflow.keras.saving import load_model
-from tensorflow.keras.utils import load_img,img_to_array
+# from tensorflow.keras.saving import load_model
+# from tensorflow.keras.utils import load_img,img_to_array
+from keras.models import load_model
+from keras.preprocessing.image import img_to_array,load_img
 import base64
+from fastapi import FastAPI,Request
+from fastapi.middleware.cors import CORSMiddleware
 import os
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+app = FastAPI()
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+# Add CORS middleware to allow requests from all origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
+uuid = 0
 
 def process_rf_image(image):
     img = cv2.imread(image)
@@ -82,133 +93,96 @@ final_model=joblib.load(final_model_path)
 
 print('All models loaded')
 
-predictions= [0] * 9
-
-index_html = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anemia Detection</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
-            width:100vw;
-            height:100vh;
-            background-color: #fff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        h1 {
-            color: #333;
-        }
-        p {
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Anemia Detection System</h1>
-        <p>Welcome to the Anemia Detection System. Use the provided endpoints to make predictions:</p>
-        <ul>
-            <li><strong>/conjunctiva</strong>: Predict features related to conjunctiva.</li>
-            <li><strong>/finger_nail</strong>: Predict features related to finger nails.</li>
-            <li><strong>/palm</strong>: Predict features related to palm.</li>
-            <li><strong>/final</strong>: Predict the final outcome based on extracted features.</li>
-        </ul>
-    </div>
-</body>
-</html>
-"""
-
-# Route for root URL
-@app.route('/')
-def index():
-    return index_html
+@app.get('/')
+async def index():
+    return {"message": "Welcome to Anemia Detection System!"}
 
 # /conjuctiva route
-@app.route('/conjunctiva', methods=['POST'])
-def predict_conjuctiva():
-    data = request.json
+@app.post('/conjunctiva')
+async def predict_conjuctiva(request: Request):
+    global uuid
+    uuid +=1
+    data = await request.json()
     image_data = data['image_data']
     image_bytes = base64.b64decode(image_data.split(',')[1])
-    image_path = 'conjunctiva.png'
-    with open(image_path, 'wb') as f:
+    image = f"conjunctiva_{uuid}.png"
+    with open(image, 'wb') as f:
         f.write(image_bytes)
     
     # Call the predict function
-    prediction_cnn = conjunctiva_cnn_model.predict(process_cnn_image(image_path))
-    prediction_knn = conjunctiva_knn_model.predict(process_knn_image(image_path))
-    prediction_rf = conjunctiva_rf_model.predict(process_rf_image(image_path))
+    prediction_cnn = conjunctiva_cnn_model.predict(process_cnn_image(image))
+    prediction_knn = conjunctiva_knn_model.predict(process_knn_image(image))
+    prediction_rf = conjunctiva_rf_model.predict(process_rf_image(image))
 
-    predictions[0]="{:.5f}".format(prediction_cnn[0][0])
-    predictions[3]=prediction_knn[0]
-    predictions[6]=prediction_rf[0]
+    predictions1="{:.5f}".format(prediction_cnn[0][0])
+    predictions2=prediction_knn[0]
+    predictions3=prediction_rf[0]
     
     # Delete the image file after prediction
     # print(predictions)
-    os.remove(image_path)
-    return jsonify({'cnn':str(predictions[0]),'knn':str(predictions[3]),'rf':str(predictions[6]) })
+    os.remove(image)
+    uuid -=1
+    return {'cnn':str(predictions1),'knn':str(predictions2),'rf':str(predictions3) }
 
 # /finger_nail route
-@app.route('/finger_nail', methods=['POST'])
-def predict_finger_nails():
-    data = request.json
+@app.post('/finger_nail')
+async def predict_finger_nails(request: Request):
+    global uuid
+    uuid +=1
+    data = await request.json()
     image_data = data['image_data']
     image_bytes = base64.b64decode(image_data.split(',')[1])
-    image_path = 'finger_nail.png'
-    with open(image_path, 'wb') as f:
+    image = f"finger_nail_{uuid}.png"
+    with open(image, 'wb') as f:
         f.write(image_bytes)
+        
     
     # Call the predict function
-    prediction_cnn = finger_nails_cnn_model.predict(process_cnn_image(image_path))
-    prediction_knn = finger_nails_knn_model.predict(process_knn_image(image_path))
-    prediction_rf = finger_nails_rf_model.predict(process_rf_image(image_path))
+    prediction_cnn = finger_nails_cnn_model.predict(process_cnn_image(image))
+    prediction_knn = finger_nails_knn_model.predict(process_knn_image(image))
+    prediction_rf = finger_nails_rf_model.predict(process_rf_image(image))
 
-    predictions[1]="{:.5f}".format(prediction_cnn[0][0])
-    predictions[4]=prediction_knn[0]
-    predictions[7]=prediction_rf[0]
+    predictions1="{:.5f}".format(prediction_cnn[0][0])
+    predictions2=prediction_knn[0]
+    predictions3=prediction_rf[0]
     
     # Delete the image file after prediction
-    os.remove(image_path)
-    return jsonify({'cnn':str(predictions[1]),'knn':str(predictions[4]),'rf':str(predictions[7]) })
+    # print(predictions)
+    os.remove(image)
+    uuid -=1
+    return {'cnn':str(predictions1),'knn':str(predictions2),'rf':str(predictions3) }
 
 # /palm route
-@app.route('/palm', methods=['POST'])
-def predict_palm():
-    data = request.json
+@app.post('/palm')
+async def predict_palm(request: Request):
+    global uuid
+    uuid +=1
+    data = await request.json()
     image_data = data['image_data']
     image_bytes = base64.b64decode(image_data.split(',')[1])
-    image_path = 'palm.png'
-    with open(image_path, 'wb') as f:
+    image = f"palm_{uuid}.png"
+    with open(image, 'wb') as f:
         f.write(image_bytes)
     
     # Call the predict function
-    prediction_cnn = palm_cnn_model.predict(process_cnn_image(image_path))
-    prediction_knn = palm_knn_model.predict(process_knn_image(image_path))
-    prediction_rf = palm_rf_model.predict(process_rf_image(image_path))
+    prediction_cnn = palm_cnn_model.predict(process_cnn_image(image))
+    prediction_knn = palm_knn_model.predict(process_knn_image(image))
+    prediction_rf = palm_rf_model.predict(process_rf_image(image))
 
-    predictions[2]="{:.5f}".format(prediction_cnn[0][0])
-    predictions[5]=prediction_knn[0]
-    predictions[8]=prediction_rf[0]
+    predictions1="{:.5f}".format(prediction_cnn[0][0])
+    predictions2=prediction_knn[0]
+    predictions3=prediction_rf[0]
     
     # Delete the image file after prediction
-    os.remove(image_path)
-    return jsonify({'cnn':str(predictions[2]),'knn':str(predictions[5]),'rf':str(predictions[8]) })
+    # print(predictions)
+    os.remove(image)
+    uuid -=1
+    return {'cnn':str(predictions1),'knn':str(predictions2),'rf':str(predictions3) }
 
 # /final route
-@app.route('/final', methods=['POST'])
-def predict_final():
-    data = request.json
+@app.post('/final')
+async def predict_final(request: Request):
+    data = await request.json()
     arr = data['features']
     print(arr)
     float_elements = [float(element) for element in arr[:3]]
@@ -217,5 +191,5 @@ def predict_final():
     pred=final_model.predict_proba([features])
     no="{:.2f}".format(pred[0][0]*100)
     yes="{:.2f}".format(pred[0][1]*100)
-    return jsonify({'no':str(no), 'yes':str(yes)})
+    return {'no':str(no), 'yes':str(yes)}
 
