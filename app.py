@@ -219,5 +219,3 @@ def predict_final():
     yes="{:.2f}".format(pred[0][1]*100)
     return jsonify({'no':str(no), 'yes':str(yes)})
 
-if __name__ == '__main__':
-    app.run()
