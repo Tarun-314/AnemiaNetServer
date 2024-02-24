@@ -1,8 +1,8 @@
 import joblib
 import cv2
 import numpy as np
-from keras.models import load_model
-from keras.preprocessing.image import load_img,img_to_array
+from tensorflow.keras.saving import load_model
+from tensorflow.keras.utils import load_img,img_to_array
 import base64
 import os
 from flask import Flask, request, jsonify
